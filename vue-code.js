@@ -7,7 +7,7 @@ const app = new Vue({
     },
     mounted() {
         this.makeData();
-         this.drawGraph();
+        this.drawGraph();
     },
     methods: {
         drawGraph() {
@@ -16,17 +16,55 @@ const app = new Vue({
             traceList.push(this.makeTrace(tqqq.Close, "TQQQ"));
             traceList.push(this.makeTrace(this.customTQQQ, "Custom TQQQ"));
             traceList.push(this.makeTrace(this.diffSeries, "diff"));
+            // 적립액
+            traceList.push(
+                this.changeToAcc(this.makeTrace(this.buyQQQ, "QQQ acc"))
+            );
+            traceList.push(
+                this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
+            );
+            /*  console.log(
+                this.changeToAcc(this.makeTrace(this.buyQQQ, "QQQ acc"))
+            );
+            console.log(
+                this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
+            ); */
             console.log(traceList);
             Plotly.newPlot(
                 this.$refs.graph,
                 traceList,
                 {
                     margin: { t: 30 },
-                    legend: { xanchor: "left", yanchor: "bottom" },
-                    //yaxis: { type: "log" },
+                    legend: {
+                        xanchor: "left",
+                        yanchor: "bottom",
+                        x: 0,
+                        y: -0.5,
+                    },
+                    yaxis: { type: "log" },
+                    yaxis2: { overlaying: "y", side: "right", type: "log" },
                 },
                 { responsive: true }
             );
+        },
+        changeToAcc(trace) {
+            const newY = [];
+            trace.y.reverse();
+            trace.x.reverse();
+            for (let i in trace.y) {
+                let sum = 0;
+                for (j = 0; j <= i; j++) {
+                    //구매단가 -> 구매 수량  = 1회 구매금액 / 구매단가
+                    sum += 1 / trace.y[j];
+                }
+                newY.push(sum * trace.y[i]);
+                //console.log(sum, trace.x[i]);
+            }
+            trace.y = newY;
+            trace.type = "scatter";
+            trace.mode = "markers";
+            trace.yaxis = "y2";
+            return trace;
         },
         /**
          * 실전데이터 생성
@@ -43,8 +81,9 @@ const app = new Vue({
             let lastTQQQValue = firstTQQQCloseValue;
             const customTQQQ = {};
             const diffSeries = {};
-            const buyQQQ = [];
-            const buyTQQQ = [];
+            this.buyQQQ = [];
+            this.buyTQQQ = [];
+            let buyCount = 30;
             for (let i = timestampList.length - 1; i > 2; i--) {
                 const now = timestampList[i];
                 const yesterday = timestampList[i - 1];
@@ -56,6 +95,13 @@ const app = new Vue({
                 customTQQQ[yesterday] = lastTQQQValue;
                 diffSeries[yesterday] =
                     ((customTQQQ[now] - tqqqClose[now]) / tqqqClose[now]) * 100;
+                // buy
+                buyCount--;
+                if (!buyCount) {
+                    buyCount = 30;
+                    this.buyTQQQ[yesterday] = lastTQQQValue;
+                    this.buyQQQ[yesterday] = yesterdayValue;
+                }
             }
             this.customTQQQ = customTQQQ;
             this.diffSeries = diffSeries;
