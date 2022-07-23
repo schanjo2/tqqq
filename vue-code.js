@@ -1,13 +1,33 @@
+/**
+ * 5년 나눠서 수익률 범위 확인하기
+ */
 const app = new Vue({
     el: "#app",
     data() {
-        return {};
+        return {
+            qqq: {
+                earningsRate: 0,
+            },
+            tqqq: {
+                earningsRate: 0,
+            },
+            accTraces: [],
+        };
     },
     mounted() {
         this.makeData();
         this.drawGraph();
+        this.calEarningRates();
     },
     methods: {
+        calEarningRates() {
+            const qqqData = this.accTraces[0].y;
+            this.qqq.earningsRate =
+                (qqqData[qqqData.length - 1] / qqqData.length) * 100 - 100;
+            const tqqqData = this.accTraces[1].y;
+            this.tqqq.earningsRate =
+                (tqqqData[tqqqData.length - 1] / tqqqData.length) * 100 - 100;
+        },
         drawGraph() {
             const traceList = [];
             traceList.push(this.makeTrace(qqq.Close, "QQQ"));
@@ -67,16 +87,15 @@ const app = new Vue({
             trace.type = "scatter";
             trace.mode = "markers";
             trace.yaxis = "y2";
+            this.accTraces.push(trace);
             return trace;
         },
         /**
          * 실전데이터 생성
          */
         makeData() {
-            //console.log(Object.keys(qqq.Close))
             const firstDateTimestamp = 1265932800000;
             const timestampList = Object.keys(qqq.Close);
-            //qqq.Close[temp1[2749]];
             const qqqClose = qqq.Close;
             const tqqqClose = tqqq.Close;
             const startDateIndex = 2749; //2010-02-12
@@ -88,7 +107,14 @@ const app = new Vue({
             this.buyTQQQ = [];
             const buyPeriod = 22; //1달에 평일이 몇일인지 고려
             let buyCount = buyPeriod;
-            for (let i = timestampList.length - 1; i > 2; i--) {
+
+            //적립 기간
+            //default
+            let accStart = 2;
+            let accEnd = timestampList.length;
+            /* accStart = 800;
+            accEnd = 1750; */
+            for (let i = timestampList.length - 1; i > accStart; i--) {
                 const now = timestampList[i];
                 const yesterday = timestampList[i - 1];
                 const nowValue = qqqClose[now];
@@ -103,8 +129,10 @@ const app = new Vue({
                 buyCount--;
                 if (!buyCount) {
                     buyCount = buyPeriod;
-                    this.buyTQQQ[yesterday] = lastTQQQValue;
-                    this.buyQQQ[yesterday] = yesterdayValue;
+                    if (i < accEnd) {
+                        this.buyTQQQ[yesterday] = lastTQQQValue;
+                        this.buyQQQ[yesterday] = yesterdayValue;
+                    }
                 }
             }
             this.customTQQQ = customTQQQ;
