@@ -2,7 +2,6 @@ const app = new Vue({
     el: "#app",
     data() {
         return {
-            test: "tt",
         };
     },
     mounted() {
@@ -105,8 +104,6 @@ const app = new Vue({
             }
             this.customTQQQ = customTQQQ;
             this.diffSeries = diffSeries;
-            console.log("result", lastTQQQValue);
-            document.querySelector("#result").value = lastTQQQValue;
         },
         makeTrace(stockData, name = "test") {
             const trace = {
