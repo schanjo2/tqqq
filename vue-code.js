@@ -7,7 +7,7 @@ const app = new Vue({
     },
     mounted() {
         this.makeData();
-        this.drawGraph();
+         this.drawGraph();
     },
     methods: {
         drawGraph() {
