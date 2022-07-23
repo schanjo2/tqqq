@@ -1,8 +1,7 @@
 const app = new Vue({
     el: "#app",
     data() {
-        return {
-        };
+        return {};
     },
     mounted() {
         this.makeData();
@@ -14,7 +13,7 @@ const app = new Vue({
             traceList.push(this.makeTrace(qqq.Close, "QQQ"));
             traceList.push(this.makeTrace(tqqq.Close, "TQQQ"));
             traceList.push(this.makeTrace(this.customTQQQ, "Custom TQQQ"));
-            traceList.push(this.makeTrace(this.diffSeries, "diff"));
+            // traceList.push(this.makeTrace(this.diffSeries, "diff"));
             // 적립액
             traceList.push(
                 this.changeToAcc(this.makeTrace(this.buyQQQ, "QQQ acc"))
@@ -35,13 +34,18 @@ const app = new Vue({
                 {
                     margin: { t: 30 },
                     legend: {
-                        xanchor: "left",
+                        xanchor: "right",
                         yanchor: "bottom",
-                        x: 0,
-                        y: -0.5,
+                        x: 1,
+                        y: 0,
                     },
-                    yaxis: { type: "log" },
-                    yaxis2: { overlaying: "y", side: "right", type: "log" },
+                    yaxis: { type: "log", title: "value" },
+                    yaxis2: {
+                        overlaying: "y",
+                        side: "right",
+                        type: "log",
+                        title: "balance",
+                    },
                 },
                 { responsive: true }
             );
@@ -82,7 +86,8 @@ const app = new Vue({
             const diffSeries = {};
             this.buyQQQ = [];
             this.buyTQQQ = [];
-            let buyCount = 30;
+            const buyPeriod = 22; //1달에 평일이 몇일인지 고려
+            let buyCount = buyPeriod;
             for (let i = timestampList.length - 1; i > 2; i--) {
                 const now = timestampList[i];
                 const yesterday = timestampList[i - 1];
@@ -97,7 +102,7 @@ const app = new Vue({
                 // buy
                 buyCount--;
                 if (!buyCount) {
-                    buyCount = 30;
+                    buyCount = buyPeriod;
                     this.buyTQQQ[yesterday] = lastTQQQValue;
                     this.buyQQQ[yesterday] = yesterdayValue;
                 }
