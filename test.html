@@ -9,8 +9,20 @@
             <div ref="graph" style="height: 1000px"></div>
             <div>
                 earning rate
-                <div>QQQ: {{qqq.earningsRate.toFixed(2)}} %</div>
-                <div>TQQQ: {{tqqq.earningsRate.toFixed(2)}} %</div>
+                <div>
+                    QQQ:
+                    <div>average : {{qqq.average.toFixed(2)}} %</div>
+                    <div>annual average : {{qqq.annualAverage.toFixed(2)}} %</div>
+                    <div>max : {{qqq.max.toFixed(2)}} %</div>
+                    <div>min : {{qqq.min.toFixed(2)}} %</div>
+                </div>
+                <div>
+                    TQQQ:
+                    <div>average : {{tqqq.average.toFixed(2)}} %</div>
+                    <div>annual average : {{tqqq.annualAverage.toFixed(2)}} %</div>
+                    <div>max : {{tqqq.max.toFixed(2)}} %</div>
+                    <div>min : {{tqqq.min.toFixed(2)}} %</div>
+                </div>
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>

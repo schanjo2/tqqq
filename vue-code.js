@@ -7,23 +7,43 @@ const app = new Vue({
     data() {
         return {
             qqq: {
-                earningsRate: 0,
+                average: 0,
+                annualAverage: 0,
+                max: 0,
+                min: 0,
             },
             tqqq: {
-                earningsRate: 0,
+                average: 0,
+                annualAverage: 0,
+                max: 0,
+                min: 0,
             },
             accTraces: [],
             dateList: [],
         };
     },
     mounted() {
+        this.duration = 5; //year
         this.dateList = Object.keys(qqq.Close);
         this.makeStockData();
         this.makeAccEarningRateData();
         this.drawGraph();
+
+        this.qqq = this.calculateSubNumbers(this.qqqEarningRate, this.duration);
+        this.tqqq = this.calculateSubNumbers(this.tqqqEarningRate, this.duration);
         // this.calEarningRates();
     },
     methods: {
+        calculateSubNumbers(target, duration) {
+            const valueList = Object.entries(target).map((v) => v[1]);
+            const max = Math.max(...valueList);
+            const min = Math.min(...valueList);
+            const average =
+                valueList.reduce((a, v) => a + v) / valueList.length;
+            const annualAverage =
+                (((average + 100) / 100) ** (1 / duration) - 1) * 100;
+            return { max, min, average, annualAverage };
+        },
         calEarningRates() {
             const qqqData = this.accTraces[0].y;
             this.qqq.earningsRate =
@@ -72,12 +92,12 @@ const app = new Vue({
                         x: 1,
                         y: 0,
                     },
-                    yaxis: { type: "log", title: "value" },
+                    yaxis: { type: "log", title: "price" },
                     yaxis2: {
                         overlaying: "y",
                         side: "right",
                         // type: "log",
-                        title: "balance",
+                        title: "수익률 %",
                     },
                 },
                 { responsive: true }
@@ -140,7 +160,7 @@ const app = new Vue({
         makeAccEarningRateData() {
             this.qqqEarningRate = {};
             this.tqqqEarningRate = {};
-            const years = 5;
+            const years = this.duration;
             const duration = 22 * 12 * years;
             const startIndex = 0;
             const maxIndex = Object.entries(qqq.Close).length - 1;
@@ -151,13 +171,17 @@ const app = new Vue({
                 const now = this.dateList[i]; // todo
                 const lastDay = this.dateList[i + duration]; // todo
                 const qqqBuyData = this.makeBuyData(qqq.Close, i, i + duration);
-                this.qqqEarningRate[lastDay] = this.calculateEaringRate(
+                this.qqqEarningRate[now] = this.calculateEaringRate(
                     qqqBuyData,
                     qqq.Close
                 );
 
-                const tqqqBuyData = this.makeBuyData(this.customTQQQ, i, i + duration);
-                this.tqqqEarningRate[lastDay] = this.calculateEaringRate(
+                const tqqqBuyData = this.makeBuyData(
+                    this.customTQQQ,
+                    i,
+                    i + duration
+                );
+                this.tqqqEarningRate[now] = this.calculateEaringRate(
                     tqqqBuyData,
                     this.customTQQQ
                 );
@@ -180,7 +204,6 @@ const app = new Vue({
             return { sum: sum * priceChart[lastDate], dateLength };
         },
         calculateEaringRate(buyHistory, priceChart) {
-            
             const accData = this.makeAccDataFromBuyHistory(
                 buyHistory,
                 priceChart
@@ -218,6 +241,7 @@ const app = new Vue({
                 trace.type = "scatter";
                 trace.mode = "markers";
                 trace.yaxis = "y2";
+                trace.marker = { size: 3 };
             }
             return trace;
         },
