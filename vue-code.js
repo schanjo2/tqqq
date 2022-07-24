@@ -1,5 +1,6 @@
 /**
  * 5년 나눠서 수익률 범위 확인하기
+ * 1배에서 차츰 비율 변경하는 방식으로도 해보기
  */
 const app = new Vue({
     el: "#app",
@@ -15,7 +16,8 @@ const app = new Vue({
         };
     },
     mounted() {
-        this.makeData();
+        this.makeStockData();
+        this.makeBuyData();
         this.drawGraph();
         this.calEarningRates();
     },
@@ -27,6 +29,7 @@ const app = new Vue({
             const tqqqData = this.accTraces[1].y;
             this.tqqq.earningsRate =
                 (tqqqData[tqqqData.length - 1] / tqqqData.length) * 100 - 100;
+                console.log(tqqqData.length,tqqqData[tqqqData.length - 1]);
         },
         drawGraph() {
             const traceList = [];
@@ -72,8 +75,6 @@ const app = new Vue({
         },
         changeToAcc(trace) {
             const newY = [];
-            trace.y.reverse();
-            trace.x.reverse();
             for (let i in trace.y) {
                 let sum = 0;
                 for (j = 0; j <= i; j++) {
@@ -93,7 +94,7 @@ const app = new Vue({
         /**
          * 실전데이터 생성
          */
-        makeData() {
+        makeStockData() {
             const firstDateTimestamp = 1265932800000;
             const timestampList = Object.keys(qqq.Close);
             const qqqClose = qqq.Close;
@@ -103,18 +104,14 @@ const app = new Vue({
             let lastTQQQValue = firstTQQQCloseValue;
             const customTQQQ = {};
             const diffSeries = {};
-            this.buyQQQ = [];
-            this.buyTQQQ = [];
-            const buyPeriod = 22; //1달에 평일이 몇일인지 고려
-            let buyCount = buyPeriod;
 
             //적립 기간
             //default
             let accStart = 2;
-            let accEnd = timestampList.length;
+            let accEnd = timestampList.length - 1;
             /* accStart = 800;
             accEnd = 1750; */
-            for (let i = timestampList.length - 1; i > accStart; i--) {
+            for (let i = accEnd; i > accStart; i--) {
                 const now = timestampList[i];
                 const yesterday = timestampList[i - 1];
                 const nowValue = qqqClose[now];
@@ -125,18 +122,32 @@ const app = new Vue({
                 customTQQQ[yesterday] = lastTQQQValue;
                 diffSeries[yesterday] =
                     ((customTQQQ[now] - tqqqClose[now]) / tqqqClose[now]) * 100;
-                // buy
-                buyCount--;
-                if (!buyCount) {
-                    buyCount = buyPeriod;
-                    if (i < accEnd) {
-                        this.buyTQQQ[yesterday] = lastTQQQValue;
-                        this.buyQQQ[yesterday] = yesterdayValue;
-                    }
-                }
             }
             this.customTQQQ = customTQQQ;
             this.diffSeries = diffSeries;
+        },
+        makeBuyData() {
+            this.buyQQQ = {};
+            this.buyTQQQ = {};
+
+            const dateList = Object.keys(qqq.Close);
+            const buyPeriod = 22; //1달에 평일이 몇일인지 고려
+            let buyPeriodCount = buyPeriod; //init count
+
+            const startIndex = 3500;
+            const endIndex = 4000; // max 5878
+
+            for (let i = startIndex; i < endIndex; i++) {
+                buyPeriodCount--;
+                if (!buyPeriodCount) {
+                    buyPeriodCount = buyPeriod;
+                    const now = dateList[i];
+                    const nowQQQValue = qqq.Close[now];
+                    this.buyQQQ[now] = nowQQQValue;
+                    const nowTQQQValue = this.customTQQQ[now];
+                    this.buyTQQQ[now] = nowTQQQValue;
+                }
+            }
         },
         makeTrace(stockData, name = "test") {
             const trace = {
@@ -150,74 +161,6 @@ const app = new Vue({
                 trace.y.push(value);
             }
             return trace;
-        },
-        /**
-         * 데이터 생성 알고리즘 검증을 위한 대조
-         */
-        makeData1() {
-            //console.log(Object.keys(qqq.Close))
-            const firstDateTimestamp = 1265932800000;
-            const timestampList = Object.keys(qqq.Close);
-            //qqq.Close[temp1[2749]];
-            const qqqClose = qqq.Close;
-            const tqqqClose = tqqq.Close;
-            const startDateIndex = 2749; //2010-02-12
-            const firstTQQQCloseValue = 0.43;
-            let lastTQQQValue = firstTQQQCloseValue;
-            const customTQQQ = {};
-            const diffSeries = {};
-            for (let i = startDateIndex + 1; i < timestampList.length; i++) {
-                const now = timestampList[i];
-                const yesterday = timestampList[i - 1];
-                const nowValue = qqqClose[now];
-                const yesterdayValue = qqqClose[yesterday];
-                const diffValue = nowValue - yesterdayValue;
-                const diffRatio = diffValue / yesterdayValue;
-                lastTQQQValue *= 1 + diffRatio * 3;
-                customTQQQ[now] = lastTQQQValue;
-                diffSeries[now] =
-                    ((customTQQQ[now] - tqqqClose[now]) / tqqqClose[now]) * 100;
-            }
-            this.customTQQQ = customTQQQ;
-            this.diffSeries = diffSeries;
-            console.log("result", lastTQQQValue);
-            document.querySelector("#result").value = lastTQQQValue;
-        },
-        /**
-         * 검증용 2 미래에서부터 역산
-         */
-        makeData2() {
-            //console.log(Object.keys(qqq.Close))
-            const firstDateTimestamp = 1265932800000;
-            const timestampList = Object.keys(qqq.Close);
-            //qqq.Close[temp1[2749]];
-            const qqqClose = qqq.Close;
-            const tqqqClose = tqqq.Close;
-            const startDateIndex = 2749; //2010-02-12
-            const firstTQQQCloseValue = 29.53;
-            let lastTQQQValue = firstTQQQCloseValue;
-            const customTQQQ = {};
-            const diffSeries = {};
-            for (
-                let i = timestampList.length - 1;
-                i > startDateIndex + 1;
-                i--
-            ) {
-                const now = timestampList[i];
-                const yesterday = timestampList[i - 1];
-                const nowValue = qqqClose[now];
-                const yesterdayValue = qqqClose[yesterday];
-                const diffValue = nowValue - yesterdayValue;
-                const diffRatio = diffValue / yesterdayValue;
-                lastTQQQValue /= 1 + diffRatio * 3;
-                customTQQQ[now] = lastTQQQValue;
-                diffSeries[now] =
-                    ((customTQQQ[now] - tqqqClose[now]) / tqqqClose[now]) * 100;
-            }
-            this.customTQQQ = customTQQQ;
-            this.diffSeries = diffSeries;
-            console.log("result", lastTQQQValue);
-            document.querySelector("#result").value = lastTQQQValue;
         },
     },
 });
