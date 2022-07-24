@@ -50,7 +50,12 @@ const app = new Vue({
                 this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
             ); */
             //qqqEarningRate
-            traceList.push(this.makeTrace(this.qqqEarningRate, "QQQ earn", "y2"));
+            traceList.push(
+                this.makeTrace(this.qqqEarningRate, "QQQ earn", "y2")
+            );
+            traceList.push(
+                this.makeTrace(this.tqqqEarningRate, "TQQQ earn", "y2")
+            );
             /*
             console.log(
                 this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
@@ -130,31 +135,32 @@ const app = new Vue({
             this.diffSeries = diffSeries;
         },
         /**
-         * 5년 주기로 사서 수익률 히스토리 만들기
+         * n년 주기로 사서 수익률 히스토리 만들기
          */
         makeAccEarningRateData() {
             this.qqqEarningRate = {};
             this.tqqqEarningRate = {};
-            const duration = 22 * 12 * 22+30; // 5년
+            const years = 5;
+            const duration = 22 * 12 * years;
             const startIndex = 0;
             const maxIndex = Object.entries(qqq.Close).length - 1;
-            const endIndex = 2000; // maxIndex - duration;
+            const endIndex = maxIndex - duration;
+            console.log(endIndex, maxIndex, duration);
 
-            let cnt = 0;
             for (let i = startIndex; i < endIndex; i++) {
                 const now = this.dateList[i]; // todo
+                const lastDay = this.dateList[i + duration]; // todo
                 const qqqBuyData = this.makeBuyData(qqq.Close, i, i + duration);
-                this.qqqEarningRate[now] = this.calculateEaringRate(
+                this.qqqEarningRate[lastDay] = this.calculateEaringRate(
                     qqqBuyData,
                     qqq.Close
                 );
-                /* const tqqqBuyData = this.makeBuyData(
-                    this.customTQQQ,
-                    i,
-                    i + duration
+
+                const tqqqBuyData = this.makeBuyData(this.customTQQQ, i, i + duration);
+                this.tqqqEarningRate[lastDay] = this.calculateEaringRate(
+                    tqqqBuyData,
+                    this.customTQQQ
                 );
-                this.tqqqEarningRate[now] =
-                    this.calculateEaringRate(tqqqBuyData); */
             }
         },
         makeAccDataFromBuyHistory(buyHistory, priceChart) {
@@ -174,6 +180,7 @@ const app = new Vue({
             return { sum: sum * priceChart[lastDate], dateLength };
         },
         calculateEaringRate(buyHistory, priceChart) {
+            
             const accData = this.makeAccDataFromBuyHistory(
                 buyHistory,
                 priceChart
