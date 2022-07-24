@@ -13,13 +13,15 @@ const app = new Vue({
                 earningsRate: 0,
             },
             accTraces: [],
+            dateList: [],
         };
     },
     mounted() {
+        this.dateList = Object.keys(qqq.Close);
         this.makeStockData();
-        this.makeBuyData();
+        this.makeAccEarningRateData();
         this.drawGraph();
-        this.calEarningRates();
+        // this.calEarningRates();
     },
     methods: {
         calEarningRates() {
@@ -29,7 +31,6 @@ const app = new Vue({
             const tqqqData = this.accTraces[1].y;
             this.tqqq.earningsRate =
                 (tqqqData[tqqqData.length - 1] / tqqqData.length) * 100 - 100;
-                console.log(tqqqData.length,tqqqData[tqqqData.length - 1]);
         },
         drawGraph() {
             const traceList = [];
@@ -38,15 +39,19 @@ const app = new Vue({
             traceList.push(this.makeTrace(this.customTQQQ, "Custom TQQQ"));
             // traceList.push(this.makeTrace(this.diffSeries, "diff"));
             // 적립액
-            traceList.push(
+            /* traceList.push(
                 this.changeToAcc(this.makeTrace(this.buyQQQ, "QQQ acc"))
             );
             traceList.push(
                 this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
             );
-            /*  console.log(
-                this.changeToAcc(this.makeTrace(this.buyQQQ, "QQQ acc"))
-            );
+            // 5년 주기 적립 수익률
+            traceList.push(
+                this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
+            ); */
+            //qqqEarningRate
+            traceList.push(this.makeTrace(this.qqqEarningRate, "QQQ earn", "y2"));
+            /*
             console.log(
                 this.changeToAcc(this.makeTrace(this.buyTQQQ, "TQQQ acc"))
             ); */
@@ -66,7 +71,7 @@ const app = new Vue({
                     yaxis2: {
                         overlaying: "y",
                         side: "right",
-                        type: "log",
+                        // type: "log",
                         title: "balance",
                     },
                 },
@@ -92,11 +97,11 @@ const app = new Vue({
             return trace;
         },
         /**
-         * 실전데이터 생성
+         * Custom TQQQ 데이터 생성
          */
         makeStockData() {
             const firstDateTimestamp = 1265932800000;
-            const timestampList = Object.keys(qqq.Close);
+            const timestampList = this.dateList;
             const qqqClose = qqq.Close;
             const tqqqClose = tqqq.Close;
             const startDateIndex = 2749; //2010-02-12
@@ -109,8 +114,6 @@ const app = new Vue({
             //default
             let accStart = 2;
             let accEnd = timestampList.length - 1;
-            /* accStart = 800;
-            accEnd = 1750; */
             for (let i = accEnd; i > accStart; i--) {
                 const now = timestampList[i];
                 const yesterday = timestampList[i - 1];
@@ -126,30 +129,74 @@ const app = new Vue({
             this.customTQQQ = customTQQQ;
             this.diffSeries = diffSeries;
         },
-        makeBuyData() {
-            this.buyQQQ = {};
-            this.buyTQQQ = {};
+        /**
+         * 5년 주기로 사서 수익률 히스토리 만들기
+         */
+        makeAccEarningRateData() {
+            this.qqqEarningRate = {};
+            this.tqqqEarningRate = {};
+            const duration = 22 * 12 * 22+30; // 5년
+            const startIndex = 0;
+            const maxIndex = Object.entries(qqq.Close).length - 1;
+            const endIndex = 2000; // maxIndex - duration;
 
-            const dateList = Object.keys(qqq.Close);
+            let cnt = 0;
+            for (let i = startIndex; i < endIndex; i++) {
+                const now = this.dateList[i]; // todo
+                const qqqBuyData = this.makeBuyData(qqq.Close, i, i + duration);
+                this.qqqEarningRate[now] = this.calculateEaringRate(
+                    qqqBuyData,
+                    qqq.Close
+                );
+                /* const tqqqBuyData = this.makeBuyData(
+                    this.customTQQQ,
+                    i,
+                    i + duration
+                );
+                this.tqqqEarningRate[now] =
+                    this.calculateEaringRate(tqqqBuyData); */
+            }
+        },
+        makeAccDataFromBuyHistory(buyHistory, priceChart) {
+            const dateLength = Object.keys(buyHistory).length;
+
+            let sum = 0;
+            let lastI = "";
+            for (let i in buyHistory) {
+                const numNow = 1 / buyHistory[i];
+                if (i == 0) {
+                    sum = 1 / numNow;
+                    continue;
+                }
+                sum += numNow;
+                lastDate = i;
+            }
+            return { sum: sum * priceChart[lastDate], dateLength };
+        },
+        calculateEaringRate(buyHistory, priceChart) {
+            const accData = this.makeAccDataFromBuyHistory(
+                buyHistory,
+                priceChart
+            );
+            return (accData.sum / accData.dateLength) * 100 - 100;
+        },
+        makeBuyData(chartData, startIndex, endIndex) {
+            //{날짜:단가}
+            const buyHistory = {};
             const buyPeriod = 22; //1달에 평일이 몇일인지 고려
+
             let buyPeriodCount = buyPeriod; //init count
-
-            const startIndex = 3500;
-            const endIndex = 4000; // max 5878
-
             for (let i = startIndex; i < endIndex; i++) {
                 buyPeriodCount--;
                 if (!buyPeriodCount) {
                     buyPeriodCount = buyPeriod;
-                    const now = dateList[i];
-                    const nowQQQValue = qqq.Close[now];
-                    this.buyQQQ[now] = nowQQQValue;
-                    const nowTQQQValue = this.customTQQQ[now];
-                    this.buyTQQQ[now] = nowTQQQValue;
+                    const now = this.dateList[i];
+                    buyHistory[now] = chartData[now];
                 }
             }
+            return buyHistory;
         },
-        makeTrace(stockData, name = "test") {
+        makeTrace(stockData, name = "test", y = "y") {
             const trace = {
                 x: [],
                 y: [],
@@ -159,6 +206,11 @@ const app = new Vue({
                 const value = stockData[key];
                 trace.x.push(moment(key * 1).format("YYYY-MM-DD hh:mm:SS"));
                 trace.y.push(value);
+            }
+            if (y == "y2") {
+                trace.type = "scatter";
+                trace.mode = "markers";
+                trace.yaxis = "y2";
             }
             return trace;
         },
